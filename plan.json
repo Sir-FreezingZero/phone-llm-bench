@@ -1,0 +1,74 @@
+{
+  "version": "2026-11-13-a",
+  "notes": "Baseline round. Moto G 2025: Dimensity 6300 (2x Cortex-A76 @2.4GHz + 6x A55 @2.0GHz), Mali-G57 MC2, 4GB LPDDR4X. Questions: best thread count? does pinning to the 2 big cores beat using all 8? Q4_0 (ARM repacked) vs Q4_K_M vs Q8_0? flash attention on/off? does the KleidiAI build help?",
+  "require_charging": true,
+  "cooldown_c": 34,
+  "cooldown_max_wait_s": 600,
+  "models": [
+    {
+      "name": "qwen2.5-0.5b-q4_0",
+      "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf"
+    },
+    {
+      "name": "qwen2.5-0.5b-q8_0",
+      "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q8_0.gguf"
+    },
+    {
+      "name": "llama3.2-1b-q4_0",
+      "url": "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf"
+    },
+    {
+      "name": "llama3.2-1b-q4_k_m",
+      "url": "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+    },
+    {
+      "name": "gemma3-1b-q4_k_m",
+      "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf"
+    }
+  ],
+  "tests": [
+    {
+      "id": "threads-qwen05-q4_0",
+      "model": "qwen2.5-0.5b-q4_0",
+      "args": "-p 128 -n 64 -r 3 -t 1,2,4,6,8"
+    },
+    {
+      "id": "pin-big-qwen05-q4_0",
+      "model": "qwen2.5-0.5b-q4_0",
+      "args": "-p 128 -n 64 -r 3 -t 2",
+      "pin": "6,7"
+    },
+    {
+      "id": "quant-qwen05-q8_0",
+      "model": "qwen2.5-0.5b-q8_0",
+      "args": "-p 128 -n 64 -r 3 -t 2,4,8"
+    },
+    {
+      "id": "quant-llama1b-q4_0",
+      "model": "llama3.2-1b-q4_0",
+      "args": "-p 128 -n 64 -r 3 -t 2,4,8"
+    },
+    {
+      "id": "quant-llama1b-q4_k_m",
+      "model": "llama3.2-1b-q4_k_m",
+      "args": "-p 128 -n 64 -r 3 -t 2,4,8"
+    },
+    {
+      "id": "gemma1b-q4_k_m",
+      "model": "gemma3-1b-q4_k_m",
+      "args": "-p 128 -n 64 -r 3 -t 2,4,8"
+    },
+    {
+      "id": "flash-attn-qwen05",
+      "model": "qwen2.5-0.5b-q4_0",
+      "args": "-p 512 -n 64 -r 3 -t 4 -fa 0,1"
+    },
+    {
+      "id": "kleidiai-qwen05-q4_0",
+      "model": "qwen2.5-0.5b-q4_0",
+      "binary": "kleidiai",
+      "args": "-p 128 -n 64 -r 3 -t 2,4"
+    }
+  ],
+  "test_timeout_min": 20
+}

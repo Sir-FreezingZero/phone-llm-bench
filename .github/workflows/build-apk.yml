@@ -1,0 +1,77 @@
+name: build-apk
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - "build-config.json"
+      - ".github/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Install ninja
+        run: sudo apt-get update -q && sudo apt-get install -y -q ninja-build
+
+      - name: Build llama-bench (NDK)
+        run: bash .github/build-llama.sh 2>&1 | tee native.log
+
+      - name: Build APK
+        run: |
+          set -o pipefail
+          cd android
+          gradle assembleRelease -PversionCode=${{ github.run_number }} --no-daemon --stacktrace 2>&1 | tee ../gradle.log
+          cp app/build/outputs/apk/release/app-release.apk ../LLM-Speed-Lab-build-${{ github.run_number }}.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" \
+            "LLM-Speed-Lab-build-${{ github.run_number }}.apk" \
+            --title "LLM Speed Lab build ${{ github.run_number }}" \
+            --notes "$(echo 'Binaries:'; jq -r '.[] | "- \(.name): \(.status) (llama.cpp \(.llama_commit)) \(.cmake_flags)"' android/app/src/main/assets/binaries.json)"
+
+      # Writes a short build report to the ci-status branch so Claude can read it with git.
+      - name: Report status
+        if: always()
+        run: |
+          mkdir -p /tmp/status
+          {
+            echo "run: ${{ github.run_number }}"
+            echo "commit: ${{ github.sha }}"
+            echo "result: ${{ job.status }}"
+            echo "time: $(date -u +%FT%TZ)"
+            echo
+            echo "== binaries.json =="; cat android/app/src/main/assets/binaries.json 2>/dev/null
+            echo; echo "== native.log (tail) =="; tail -n 120 native.log 2>/dev/null
+            echo; echo "== gradle.log (tail) =="; tail -n 150 gradle.log 2>/dev/null
+          } > /tmp/status/STATUS.md
+          cd /tmp/status
+          git init -q
+          git config user.name "ci"
+          git config user.email "ci@users.noreply.github.com"
+          git add STATUS.md
+          git commit -q -m "build ${{ github.run_number }}: ${{ job.status }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:ci-status

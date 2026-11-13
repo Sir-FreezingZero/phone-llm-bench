@@ -1,0 +1,15 @@
+{
+  "comment": "Each variant becomes one llama-bench executable inside the app. Tests pick one with \"binary\": \"<name>\". Editing this file makes GitHub build a new APK.",
+  "variants": [
+    {
+      "name": "default",
+      "llama_ref": "master",
+      "cmake_flags": "-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16"
+    },
+    {
+      "name": "kleidiai",
+      "llama_ref": "master",
+      "cmake_flags": "-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 -DGGML_CPU_KLEIDIAI=ON"
+    }
+  ]
+}
